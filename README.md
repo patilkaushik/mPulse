@@ -1,2 +1,2 @@
 # mPulse
-The is a shell script written to capture system rudiment parameters to investigate and troubleshoot performance bottlenecks.
+The purpose of this shell script is to capture system runtime data to investigate and troubleshoot performance bottlenecks.
