@@ -12,26 +12,56 @@
 
 #mPulse
 
-OUTPUT=/tmp/mPulse$(date +%Y-%m-%d:%T)
+#OUTPUT=/tmp/mPulse$(date +%Y-%m-%d:%T)
 
 Initialize () {
 
 if [ $UID -gt 0 ]
 	then
 	echo "You're not a root user. Only Root should run this script. ERR01"
-	exit 1	:
+	exit 1	
+fi
+
+if [ $# -eq 0 ]
+	then
+	echo "Usage: $0 -d [Output directory]"
+	exit 3
+fi
+
+while getopts 'd:h' opt
+do
+	case $opt in
+		d)   if [ -d $OPTARG ] 
+			then 
+				OUTPUT="${OPTARG%/}/mPulse$(date +%Y-%m-%d:%T)" 
+		     else
+				echo "Usage: $0 -d <Output directory>"
+				exit 4
+		     fi
+		     ;;
+
+		*|h) echo "Usage: $0 -d <Output directory>"
+		     exit 2;;
+	esac
+done
+
+#Create directory structure
+mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info
+if [ $? -ne 0 ]
+	then
+	echo Unable to create directory under $OUTPUT
+	exit 5
 fi
 
 }
 
-Initialize
+Initialize $@
+
+echo "Data will be stored under the path $OUTPUT"
 
 System_Runtime() {
 
-#move directory create par tin initiaize
-mkdir -p $OUTPUT/System_Runtime
-#check if directory is created or errors
-
+#change directory to runtime
 cd $OUTPUT/System_Runtime
 
 #netstat
@@ -71,12 +101,9 @@ last -n 100 > last_n100.out
 vmstat 1 5 -t -n -d > vmstat_tnd.out
 vmstat 1 5 -t -n > vmstat_tn.out
 
-#meminfo
-cat /proc/meminfo > meminfo.out
-
-#cpuinfo
-cat /proc/cpuinfo > cpuinfo.out
-
+#df
+df -P > df_P.out
+df -iP > df_iP.out
 
 #Template for future reference
 
@@ -86,3 +113,30 @@ cat /proc/cpuinfo > cpuinfo.out
 }
 
 System_Runtime
+
+System_Info () {
+
+cd $OUTPUT/System_Info
+
+#meminfo
+cat /proc/meminfo > meminfo.out
+
+#cpuinfo
+cat /proc/cpuinfo > cpuinfo.out
+
+#uname
+uname -a > uname_a.out
+
+#os release
+[ -f /etc/os-release ] && egrep '^NAME=|^VERSION=' /etc/os-release > os-release.out
+
+#hosname
+hostname > hostname.out
+ifconfig > ifconfig.out
+
+#dmesg
+dmesg > dmesg.out
+
+}
+
+System_Info
