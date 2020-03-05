@@ -14,6 +14,19 @@
 
 #OUTPUT=/tmp/mPulse$(date +%Y-%m-%d:%T)
 
+mUsage() {
+if [ $# -ne 0 ]
+        then
+        echo "$@"
+fi
+
+echo -e "Usage: $0 -d <Output directory>\
+         \n\t Parameter details \n\t\t -d provide input directory to generate output to\
+	 \n\t\t -h print help information"
+
+}
+
+
 Initialize () {
 
 if [ $UID -gt 0 ]
@@ -24,7 +37,7 @@ fi
 
 if [ $# -eq 0 ]
 	then
-	echo "Usage: $0 -d [Output directory]"
+	mUsage "Input parameters are expected"
 	exit 3
 fi
 
@@ -35,29 +48,43 @@ do
 			then 
 				OUTPUT="${OPTARG%/}/mPulse$(date +%Y-%m-%d:%T)" 
 		     else
-				echo "Usage: $0 -d <Output directory>"
+				mUsage "Input directory does not exist"
 				exit 4
 		     fi
 		     ;;
 
-		*|h) echo "Usage: $0 -d <Output directory>"
+		*|h) mUsage "You need help, here you go "
 		     exit 2;;
 	esac
 done
 
 #Create directory structure
-mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info
+mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log
 if [ $? -ne 0 ]
 	then
 	echo Unable to create directory under $OUTPUT
 	exit 5
 fi
 
+LOG=$OUTPUT/mPulse_log/mPulse.log
+
 }
 
 Initialize $@
 
-echo "Data will be stored under the path $OUTPUT"
+#mlogger "Data will be stored under the path $OUTPUT"
+
+
+mLogger () {
+
+echo $@|tee -a $LOG
+
+}
+
+
+
+mLogger "Data will be stored under the path $OUTPUT"
+
 
 System_Runtime() {
 
@@ -104,6 +131,9 @@ vmstat 1 5 -t -n > vmstat_tn.out
 #df
 df -P > df_P.out
 df -iP > df_iP.out
+
+#ipcs
+ipcs > ipcs.out
 
 #Template for future reference
 
