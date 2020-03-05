@@ -12,8 +12,6 @@
 
 #mPulse
 
-#OUTPUT=/tmp/mPulse$(date +%Y-%m-%d:%T)
-
 mUsage() {
 if [ $# -ne 0 ]
         then
@@ -72,19 +70,13 @@ LOG=$OUTPUT/mPulse_log/mPulse.log
 
 Initialize $@
 
-#mlogger "Data will be stored under the path $OUTPUT"
-
-
 mLogger () {
 
 echo $@|tee -a $LOG
 
 }
 
-
-
 mLogger "Data will be stored under the path $OUTPUT"
-
 
 System_Runtime() {
 
