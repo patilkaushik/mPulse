@@ -204,6 +204,9 @@ tail -10000 /var/log/secure > secure_10k.out
 tail -10000 /var/log/maillog > maillog_10k.out
 tail -10000 /var/log/cron > cron_10k.out
 
+#Last 2 sar files
+ls -ltrh /var/log/sa/sa[0-9]*|tail -2 |awk '{print $NF}'|xargs -I line cp -p line .
+
 }
 
 mLogger -i "mPulse is dumping system logs"
