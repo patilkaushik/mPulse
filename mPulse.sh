@@ -6,12 +6,13 @@
 # WIP                                                                 #
 #######################################################################
 
-
 # /var/logs
 # messages,secure,utmp,wtmp,btmp,maillog,cron,dmesg
 
-#mPulse
+#mPulse Script
 
+#mUsage - prints provided error along with the usage of te mPulse
+#Syntax : mUsage "Error message"
 mUsage() {
 if [ $# -ne 0 ]
         then
@@ -24,15 +25,41 @@ echo -e "Usage: $0 -d <Output directory>\
 
 }
 
+#mLogger - Displays the logs on the STDOUT and stores it in the log file.
+# Syntax mLogger <-i|-e|-w> "Logs to capture"
+# -i => INFO -e => ERROR -w => WARNING
+mLogger () {
+case $1 in
+	-e) FLAG="ERROR : "
+		shift
+		;;
+	-i) FLAG="INFO : "
+		shift
+		;;
+	-w) FLAG="WARNING : "
+		shift
+		;;
+	-d) FLAG="DEBUG : "
+		shift
+		;;
+	*) FLAG=""
+		;;  
+esac
+echo "$FLAG$@"|tee -a $LOG
+}
 
+#Initialize - performs standard checks for the script and sets variable as well as create 
+#             required directory structure.
 Initialize () {
 
+#Checks root access.
 if [ $UID -gt 0 ]
 	then
 	echo "You're not a root user. Only Root should run this script. ERR01"
 	exit 1	
 fi
 
+#Input parameter validation
 if [ $# -eq 0 ]
 	then
 	mUsage "Input parameters are expected"
@@ -57,7 +84,7 @@ do
 done
 
 #Create directory structure
-mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log
+mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log $OUTPUT/System_Logs
 if [ $? -ne 0 ]
 	then
 	echo Unable to create directory under $OUTPUT
@@ -69,14 +96,8 @@ LOG=$OUTPUT/mPulse_log/mPulse.log
 }
 
 Initialize $@
-
-mLogger () {
-
-echo $@|tee -a $LOG
-
-}
-
-mLogger "Data will be stored under the path $OUTPUT"
+ 
+mLogger -i "Data will be stored under the path $OUTPUT"
 
 System_Runtime() {
 
@@ -121,7 +142,7 @@ vmstat 1 5 -t -n -d > vmstat_tnd.out
 vmstat 1 5 -t -n > vmstat_tn.out
 
 #df
-df -P > df_P.out
+df -TP > df_TP.out
 df -iP > df_iP.out
 
 #ipcs
@@ -134,6 +155,7 @@ ipcs > ipcs.out
 
 }
 
+mLogger -i "mPulse is capturing System Runtime data"
 System_Runtime
 
 System_Info () {
@@ -159,6 +181,30 @@ ifconfig > ifconfig.out
 #dmesg
 dmesg > dmesg.out
 
+#fdisk
+fdisk -l>fdisk_l.out
+
+#Template
+#future scope
+#lsblk, lsscsi, lspci, lsusb
+
 }
 
+mLogger -i "mPulse is capturing System Information"
 System_Info
+
+System_Logs () {
+
+# utmp,wtmp,btmp,
+
+cd $OUTPUT/System_Logs
+
+tail -10000 /var/log/messages > messages_10k.out
+tail -10000 /var/log/secure > secure_10k.out
+tail -10000 /var/log/maillog > maillog_10k.out
+tail -10000 /var/log/cron > cron_10k.out
+
+}
+
+mLogger -i "mPulse is dumping system logs"
+System_Logs
