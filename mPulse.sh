@@ -66,7 +66,7 @@ if [ $# -eq 0 ]
 	exit 3
 fi
 
-while getopts 'd:h' opt
+while getopts 'd:j:h' opt
 do
 	case $opt in
 		d)   if [ -d $OPTARG ] 
@@ -77,6 +77,15 @@ do
 				exit 4
 		     fi
 		     ;;
+		j)   if [ ! -z $OPTARG ] && [ $(ps -p $OPTARG|wc -l) -gt 1  ]
+			then
+				JVMPID=$OPTARG
+				JVMDATA="TRUE"
+		     else
+				mUsage "Incorrect JVM parameters"
+		     		exit 5
+		     fi
+		     ;;
 
 		*|h) mUsage "You need help, here you go "
 		     exit 2;;
@@ -84,7 +93,7 @@ do
 done
 
 #Create directory structure
-mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log $OUTPUT/System_Logs
+mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log $OUTPUT/System_Logs $OUTPUT/JVM_Runtime
 if [ $? -ne 0 ]
 	then
 	echo Unable to create directory under $OUTPUT
@@ -184,6 +193,9 @@ dmesg > dmesg.out
 #fdisk
 fdisk -l>fdisk_l.out
 
+#sysctl
+sysctl -a > sysctl_a.out 2>&1
+
 #Template
 #future scope
 #lsblk, lsscsi, lspci, lsusb
@@ -211,3 +223,41 @@ ls -ltrh /var/log/sa/sa[0-9]*|tail -2 |awk '{print $NF}'|xargs -I line cp -p lin
 
 mLogger -i "mPulse is dumping system logs"
 System_Logs
+
+JVM_Runtime () {
+
+if [ -z $JAVA_HOME  ] || [ ! -d $JAVA_HOME ]
+	then
+		JAVA_HOME=$(ls -ltdrh /usr/lib/jvm/*jdk*|grep -v jre|tail -1|awk '{print $NF}')
+fi
+
+cd $OUTPUT/JVM_Runtime
+
+iotop -n 10 -btqqq -p $JVMPID > iotop_jvm.out
+
+#jmap
+jmap -heap $JVMPID > jmap_heap.out
+jmap -histo $JVMPID -F > jmap_histo.out
+jmap -finalizerinfo $JVMPID > jmap_fininfo.out
+jmap -F -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log 2>&1
+
+#jstack
+jstack -l $JVMPID > jstack_l.out
+jstack -F -l $JVMPID > jstack_Fl.out
+jstack -m -F -l $JVMPID > jstack_mlF.out
+
+
+#strace
+strace -o $JVMPID.strace -tt -T -ff -p $JVMPID > strace.log 2>&1 &
+STPID=$!
+sleep 30
+kill -8 $STPID
+
+}
+
+
+if [ JVMDATA==TRUE ]
+	then
+		JVM_Runtime $JVMPID
+fi
+
