@@ -1,15 +1,22 @@
 #!/bin/bash
-
 #######################################################################
-# This script will capture all the sytem logs and runtime information #
-# Can be used in impairment situation to gather info                  #
-# WIP                                                                 #
+# 				mPulse.sh			      #
+#                                                                     #
+# Descrption: This script captures system logs, runtime information,  #
+#	  general system info & JVM diagnostics data.	    	      #		
+#	  Intention of this script is to capture as much data as      #
+#         possible during the impairment or severe performance        #
+#         degradation.                                                #
+# Auther: Kaushik Patil						      #
+# Email : er.kaushikpatil@gmail.com				      #
+# Vesion: 0.0.1 Alpha						      #
+# Release Notes/Remarks : Written specifically for centOS and most of # 
+#	  the parts are hardcoded and unoptimized.		      #
+# Future: More dynamic, additional validation and running multiple    # 
+#	  jobs simultaneously to bring down total runtime of the      #
+#	  script.						      #	
+#	 							      #		
 #######################################################################
-
-# /var/logs
-# messages,secure,utmp,wtmp,btmp,maillog,cron,dmesg
-
-#mPulse Script
 
 #mUsage - prints provided error along with the usage of te mPulse
 #Syntax : mUsage "Error message"
@@ -19,9 +26,18 @@ if [ $# -ne 0 ]
         echo "$@"
 fi
 
-echo -e "Usage: $0 -d <Output directory>\
-         \n\t Parameter details \n\t\t -d provide input directory to generate output to\
-	 \n\t\t -h print help information"
+echo -e "
+Usage: $0 -d <Output directory>
+     Parameter details
+         -d provide input directory where you want to generate output.
+         -j to provide java pid to run JVM diagnostics againt java pid.
+                Syntax: $0 -d <Output directory> -j <java pid>
+         -c Check whether required binaries are available on the system.
+	 -h prints this information.
+            mPulse manual page can be accessed through 'manual' parameter
+                Example $0 -h manual
+            This option is under devlopement.
+                "
 
 }
 
@@ -29,6 +45,9 @@ echo -e "Usage: $0 -d <Output directory>\
 # Syntax mLogger <-i|-e|-w> "Logs to capture"
 # -i => INFO -e => ERROR -w => WARNING
 mLogger () {
+
+if [ $# -gt 0 ]
+	then
 case $1 in
 	-e) FLAG="ERROR : "
 		shift
@@ -46,6 +65,9 @@ case $1 in
 		;;  
 esac
 echo "$FLAG$@"|tee -a $LOG
+else
+	exit 100
+fi
 }
 
 #Initialize - performs standard checks for the script and sets variable as well as create 
@@ -66,8 +88,9 @@ if [ $# -eq 0 ]
 	exit 3
 fi
 
-while getopts 'd:j:h' opt
+while getopts ':d:j:h:c' opt
 do
+	GETOPTS=1
 	case $opt in
 		d)   if [ -d $OPTARG ] 
 			then 
@@ -87,13 +110,34 @@ do
 		     fi
 		     ;;
 
-		*|h) mUsage "You need help, here you go "
-		     exit 2;;
+		h) if [ $OPTARG==[mM][aA][Nn][Uu][Aa][Ll] ]
+		   then
+			#Guide function
+			mUsage "Manual is under development please refer help"
+		   else
+			mUsage "mPulse help"
+		     	exit 2
+			
+		   fi
+		   ;;
+		c) mCheck
+		   exit 0
+		   ;;
+		?) mUsage "Unexpected parameters"
+		   exit 10
+		   ;;
 	esac
 done
 
+if [ $# -gt 0 ] && ((GETOPTS==0 ));
+	then
+		mUsage "Bad parameters"
+		exit 10
+fi
+
+
 #Create directory structure
-mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log $OUTPUT/System_Logs $OUTPUT/JVM_Runtime
+mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log $OUTPUT/System_Logs 
 if [ $? -ne 0 ]
 	then
 	echo Unable to create directory under $OUTPUT
@@ -104,9 +148,18 @@ LOG=$OUTPUT/mPulse_log/mPulse.log
 
 }
 
-Initialize $@
- 
-mLogger -i "Data will be stored under the path $OUTPUT"
+mCheck () {
+
+echo "Checking mPulse requirements"
+grep '>' $0 |awk '{print $1}'|egrep -v ":|#|\["|sort|uniq > $OUTPUT/commands
+while read cmd
+do
+	type $cmd > /dev/null 2>&1 && echo -e "$cmd \e[1;32mOK\e[0m" || echo -e "$cmd \e[1;31mNotFound\e[0m Please install $cmd"
+done < $OUTPUT/commands
+rm $OUTPUT/commands
+}
+
+
 
 System_Runtime() {
 
@@ -146,6 +199,9 @@ w > w.out
 #last
 last -n 100 > last_n100.out
 
+#lastlog
+lastlog > lastlog.out
+
 #vmstat
 vmstat 1 5 -t -n -d > vmstat_tnd.out
 vmstat 1 5 -t -n > vmstat_tn.out
@@ -164,8 +220,7 @@ ipcs > ipcs.out
 
 }
 
-mLogger -i "mPulse is capturing System Runtime data"
-System_Runtime
+
 
 System_Info () {
 
@@ -202,8 +257,7 @@ sysctl -a > sysctl_a.out 2>&1
 
 }
 
-mLogger -i "mPulse is capturing System Information"
-System_Info
+
 
 System_Logs () {
 
@@ -221,8 +275,7 @@ ls -ltrh /var/log/sa/sa[0-9]*|tail -2 |awk '{print $NF}'|xargs -I line cp -p lin
 
 }
 
-mLogger -i "mPulse is dumping system logs"
-System_Logs
+
 
 JVM_Runtime () {
 
@@ -256,8 +309,24 @@ kill -8 $STPID
 }
 
 
+mLogger -i "Initializing.."
+Initialize $@
+[ $? == 0 ] && mLogger -i "Initialization successful." || mLogger -e "Initialization wasn't successful"
+
+mLogger -i "Data will be stored under the path $OUTPUT"
+
+mLogger -i "mPulse is capturing System Runtime data"
+System_Runtime
+
+mLogger -i "mPulse is capturing System Information"
+System_Info
+
+mLogger -i "mPulse is dumping system logs"
+System_Logs
+
 if [ JVMDATA==TRUE ]
 	then
+		mkdir $OUTPUT/JVM_Runtime
 		JVM_Runtime $JVMPID
 fi
 
