@@ -73,12 +73,12 @@ fi
 mCheck () {
 
 echo "Checking mPulse requirements"
-grep '>' $0 |awk '{print $1}'|egrep -v ":|#|\["|sort|uniq > ./commands_mPulse
+grep '>' $0 |awk '{print $1}'|egrep -v ":|#|\["|sort|uniq > ~/commands_mPulse
 while read cmd
 do
         type $cmd > /dev/null 2>&1 && echo -e "$cmd \e[1;32mOK\e[0m" || echo -e "$cmd \e[1;31mNotFound\e[0m Please install $cmd"
-done < ./commands_mPulse
-rm ./commands_mPulse
+done < ~/commands_mPulse
+rm ~/commands_mPulse
 }
 
 
