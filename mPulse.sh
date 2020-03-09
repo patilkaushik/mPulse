@@ -70,6 +70,18 @@ else
 fi
 }
 
+mCheck () {
+
+echo "Checking mPulse requirements"
+grep '>' $0 |awk '{print $1}'|egrep -v ":|#|\["|sort|uniq > ./commands_mPulse
+while read cmd
+do
+        type $cmd > /dev/null 2>&1 && echo -e "$cmd \e[1;32mOK\e[0m" || echo -e "$cmd \e[1;31mNotFound\e[0m Please install $cmd"
+done < ./commands_mPulse
+rm ./commands_mPulse
+}
+
+
 #Initialize - performs standard checks for the script and sets variable as well as create 
 #             required directory structure.
 Initialize () {
@@ -88,7 +100,7 @@ if [ $# -eq 0 ]
 	exit 3
 fi
 
-while getopts ':d:j:h:c' opt
+while getopts 'd:j:h:c' opt
 do
 	GETOPTS=1
 	case $opt in
@@ -120,8 +132,8 @@ do
 			
 		   fi
 		   ;;
-		c) mCheck
-		   exit 0
+		c) CHECKONLY='TRUE'
+		   break
 		   ;;
 		?) mUsage "Unexpected parameters"
 		   exit 10
@@ -133,8 +145,17 @@ if [ $# -gt 0 ] && ((GETOPTS==0 ));
 	then
 		mUsage "Bad parameters"
 		exit 10
-fi
+elif [ ! -z $CHECKONLY ] && [ $CHECKONLY=='TRUE' ]
+	then
+		echo $CHECKONLY
+ 		mCheck
+		exit 0
+elif [ -z $OUTPUT ]
+        then
+                mUsage "Specify Output directory"
+                exit 10
 
+fi
 
 #Create directory structure
 mkdir -p $OUTPUT/System_Runtime $OUTPUT/System_Info $OUTPUT/mPulse_log $OUTPUT/System_Logs 
@@ -148,16 +169,6 @@ LOG=$OUTPUT/mPulse_log/mPulse.log
 
 }
 
-mCheck () {
-
-echo "Checking mPulse requirements"
-grep '>' $0 |awk '{print $1}'|egrep -v ":|#|\["|sort|uniq > $OUTPUT/commands
-while read cmd
-do
-	type $cmd > /dev/null 2>&1 && echo -e "$cmd \e[1;32mOK\e[0m" || echo -e "$cmd \e[1;31mNotFound\e[0m Please install $cmd"
-done < $OUTPUT/commands
-rm $OUTPUT/commands
-}
 
 
 
