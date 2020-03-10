@@ -76,7 +76,7 @@ echo "Checking mPulse requirements"
 grep '>' $0 |awk '{print $1}'|egrep -v ":|#|\["|sort|uniq > ~/commands_mPulse
 while read cmd
 do
-        type $cmd > /dev/null 2>&1 && echo -e "$cmd \e[1;32mOK\e[0m" || echo -e "$cmd \e[1;31mNotFound\e[0m Please install $cmd"
+        type $cmd > /dev/null 2>&1 && echo -e "$cmd  \e[1;32mOK\e[0m" || echo -e "$cmd \e[1;31mNotFound\e[0m Please install $cmd"
 done < ~/commands_mPulse
 rm ~/commands_mPulse
 }
@@ -115,7 +115,7 @@ do
 		j)   if [ ! -z $OPTARG ] && [ $(ps -p $OPTARG|wc -l) -gt 1  ]
 			then
 				JVMPID=$OPTARG
-				JVMDATA="TRUE"
+				JVMDATA='1'
 		     else
 				mUsage "Incorrect JVM parameters"
 		     		exit 5
@@ -147,7 +147,6 @@ if [ $# -gt 0 ] && ((GETOPTS==0 ));
 		exit 10
 elif [ ! -z $CHECKONLY ] && [ $CHECKONLY=='TRUE' ]
 	then
-		echo $CHECKONLY
  		mCheck
 		exit 0
 elif [ -z $OUTPUT ]
@@ -168,9 +167,6 @@ fi
 LOG=$OUTPUT/mPulse_log/mPulse.log
 
 }
-
-
-
 
 System_Runtime() {
 
@@ -231,8 +227,6 @@ ipcs > ipcs.out
 
 }
 
-
-
 System_Info () {
 
 cd $OUTPUT/System_Info
@@ -268,8 +262,6 @@ sysctl -a > sysctl_a.out 2>&1
 
 }
 
-
-
 System_Logs () {
 
 # utmp,wtmp,btmp,
@@ -286,8 +278,6 @@ ls -ltrh /var/log/sa/sa[0-9]*|tail -2 |awk '{print $NF}'|xargs -I line cp -p lin
 
 }
 
-
-
 JVM_Runtime () {
 
 if [ -z $JAVA_HOME  ] || [ ! -d $JAVA_HOME ]
@@ -297,18 +287,18 @@ fi
 
 cd $OUTPUT/JVM_Runtime
 
-iotop -n 10 -btqqq -p $JVMPID > iotop_jvm.out
+iotop -n 10 -btqqq -p $JVMPID > iotop_jvm.out 2> /dev/null
 
 #jmap
-jmap -heap $JVMPID > jmap_heap.out
-jmap -histo $JVMPID -F > jmap_histo.out
-jmap -finalizerinfo $JVMPID > jmap_fininfo.out
-jmap -F -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log 2>&1
+jmap -heap $JVMPID > jmap_heap.out 2>jmap_heap.err
+jmap -histo $JVMPID -F > jmap_histo.out 2>jmap_histo.err
+jmap -finalizerinfo $JVMPID > jmap_fininfo.out 2>jmap_fininfo.err
+jmap -F -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log 2>jmap_dump.err
 
 #jstack
-jstack -l $JVMPID > jstack_l.out
-jstack -F -l $JVMPID > jstack_Fl.out
-jstack -m -F -l $JVMPID > jstack_mlF.out
+jstack -l $JVMPID > jstack_l.out 2>jstack_l.err
+jstack -F -l $JVMPID > jstack_Fl.out 2>jstack_Fl.err
+jstack -m -F -l $JVMPID > jstack_mlF.out 2>jstack_mlF.err
 
 
 #strace
@@ -320,7 +310,6 @@ kill -8 $STPID
 }
 
 
-mLogger -i "Initializing.."
 Initialize $@
 [ $? == 0 ] && mLogger -i "Initialization successful." || mLogger -e "Initialization wasn't successful"
 
@@ -335,9 +324,9 @@ System_Info
 mLogger -i "mPulse is dumping system logs"
 System_Logs
 
-if [ JVMDATA==TRUE ]
+if [ ! -z $JVMDATA ] && [ $JVMDATA -eq '1' ]
 	then
 		mkdir $OUTPUT/JVM_Runtime
-		JVM_Runtime $JVMPID
+		 JVM_Runtime $JVMPID
 fi
 
