@@ -64,7 +64,7 @@ case $1 in
 	*) FLAG=""
 		;;  
 esac
-echo "$FLAG$@"|tee -a $LOG
+echo "$FLAG$(date '+%H:%M:%S@%d-%h') : $@"|tee -a $LOG
 else
 	exit 100
 fi
@@ -112,7 +112,7 @@ do
 				exit 4
 		     fi
 		     ;;
-		j)   if [ ! -z $OPTARG ] && [ $(ps -p $OPTARG|wc -l) -gt 1  ]
+		j)   if [ ! -z $OPTARG ] && [ $(ps -p $OPTARG 2> /dev/null|wc -l) -gt 1  ]
 			then
 				JVMPID=$OPTARG
 				JVMDATA='1'
@@ -165,7 +165,7 @@ if [ $? -ne 0 ]
 fi
 
 LOG=$OUTPUT/mPulse_log/mPulse.log
-
+ERRLOG=${LOG%log}err
 }
 
 System_Runtime() {
@@ -174,51 +174,51 @@ System_Runtime() {
 cd $OUTPUT/System_Runtime
 
 #netstat
-netstat -tulpn > netstat_tulpn.out
+netstat -tulpn > netstat_tulpn.out 2> $ERRLOG
 
 #top by mem
-top -n 1 -o %MEM > top_mem.out
+top -n 1 -o %MEM > top_mem.out 2> $ERRLOG
 
 #top by cpu
-top -n 1 -o %CPU > top_cpu.out
+top -n 1 -o %CPU > top_cpu.out 2> $ERRLOG 
 
 #ps auwxx
-ps auwxx > ps_auwxx.out
+ps auwxx > ps_auwxx.out 2> $ERRLOG
 
 #ps by res top 25
-ps auwx --sort -rss|head -26 > ps_auwx_rss.out
+ps auwx --sort -rss 2> $ERRLOG|head -26 > ps_auwx_rss.out
 
 #ps by virt top 25
-ps auwx --sort -vsz|head -26 > ps_auwx_vsz.out
+ps auwx --sort -vsz 2> $ERRLOG|head -26 > ps_auwx_vsz.out
 
 #lsof
-lsof > lsof.out
+lsof  > lsof.out 2> $ERRLOG
 
 #free
-free -m > free_m.out
+free -m > free_m.out 2> $ERRLOG
 
 #iotop
-iotop -boPtqqq -n 5 > iotop_boPtqqq_n5.out
+iotop -boPtqqq -n 5 > iotop_boPtqqq_n5.out 2> $ERRLOG
 
 #w
-w > w.out
+w > w.out 2> $ERRLOG
 
 #last
-last -n 100 > last_n100.out
+last -n 100 > last_n100.out 2> $ERRLOG
 
 #lastlog
-lastlog > lastlog.out
+lastlog > lastlog.out 2> $ERRLOG
 
 #vmstat
-vmstat 1 5 -t -n -d > vmstat_tnd.out
-vmstat 1 5 -t -n > vmstat_tn.out
+vmstat 1 5 -t -n -d > vmstat_tnd.out 2> $ERRLOG
+vmstat 1 5 -t -n > vmstat_tn.out 2> $ERRLOG
 
 #df
-df -TP > df_TP.out
-df -iP > df_iP.out
+df -TP > df_TP.out 2> $ERRLOG
+df -iP > df_iP.out 2> $ERRLOG
 
 #ipcs
-ipcs > ipcs.out
+ipcs > ipcs.out 2> $ERRLOG
 
 #Template for future reference
 
@@ -232,29 +232,29 @@ System_Info () {
 cd $OUTPUT/System_Info
 
 #meminfo
-cat /proc/meminfo > meminfo.out
+cat /proc/meminfo > meminfo.out 2> $ERRLOG
 
 #cpuinfo
-cat /proc/cpuinfo > cpuinfo.out
+cat /proc/cpuinfo > cpuinfo.out 2> $ERRLOG
 
 #uname
-uname -a > uname_a.out
+uname -a > uname_a.out 2> $ERRLOG
 
 #os release
-[ -f /etc/os-release ] && egrep '^NAME=|^VERSION=' /etc/os-release > os-release.out
+[ -f /etc/os-release ] && egrep '^NAME=|^VERSION=' /etc/os-release > os-release.out 2> $ERRLOG
 
 #hosname
-hostname > hostname.out
-ifconfig > ifconfig.out
+hostname > hostname.out 2> $ERRLOG
+ifconfig > ifconfig.out 2> $ERRLOG
 
 #dmesg
-dmesg > dmesg.out
+dmesg > dmesg.out 2> $ERRLOG
 
 #fdisk
-fdisk -l>fdisk_l.out
+fdisk -l>fdisk_l.out 2> $ERRLOG
 
 #sysctl
-sysctl -a > sysctl_a.out 2>&1
+sysctl -a > sysctl_a.out 2>&1 
 
 #Template
 #future scope
@@ -268,13 +268,13 @@ System_Logs () {
 
 cd $OUTPUT/System_Logs
 
-tail -10000 /var/log/messages > messages_10k.out
-tail -10000 /var/log/secure > secure_10k.out
-tail -10000 /var/log/maillog > maillog_10k.out
-tail -10000 /var/log/cron > cron_10k.out
+tail -10000 /var/log/messages > messages_10k.out 2> $ERRLOG
+tail -10000 /var/log/secure > secure_10k.out 2> $ERRLOG
+tail -10000 /var/log/maillog > maillog_10k.out 2> $ERRLOG
+tail -10000 /var/log/cron > cron_10k.out 2> $ERRLOG
 
 #Last 2 sar files
-ls -ltrh /var/log/sa/sa[0-9]*|tail -2 |awk '{print $NF}'|xargs -I line cp -p line .
+ls -ltrh /var/log/sa/sa[0-9]* 2> $ERRLOG|tail -2 |awk '{print $NF}'|xargs -I line cp -p line .
 
 }
 
@@ -290,15 +290,15 @@ cd $OUTPUT/JVM_Runtime
 iotop -n 10 -btqqq -p $JVMPID > iotop_jvm.out 2> /dev/null
 
 #jmap
-jmap -heap $JVMPID > jmap_heap.out 2>jmap_heap.err
-jmap -histo $JVMPID -F > jmap_histo.out 2>jmap_histo.err
-jmap -finalizerinfo $JVMPID > jmap_fininfo.out 2>jmap_fininfo.err
-jmap -F -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log 2>jmap_dump.err
+jmap -heap $JVMPID > jmap_heap.out  2> $ERRLOG
+jmap -histo $JVMPID -F > jmap_histo.out  2> $ERRLOG
+jmap -finalizerinfo $JVMPID > jmap_fininfo.out  2> $ERRLOG
+jmap -F -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log  2> $ERRLOG
 
 #jstack
-jstack -l $JVMPID > jstack_l.out 2>jstack_l.err
-jstack -F -l $JVMPID > jstack_Fl.out 2>jstack_Fl.err
-jstack -m -F -l $JVMPID > jstack_mlF.out 2>jstack_mlF.err
+jstack -l $JVMPID > jstack_l.out  2> $ERRLOG
+jstack -F -l $JVMPID > jstack_Fl.out  2> $ERRLOG 
+jstack -m -F -l $JVMPID > jstack_mlF.out  2> $ERRLOG
 
 
 #strace
@@ -313,7 +313,7 @@ kill -8 $STPID
 Initialize $@
 [ $? == 0 ] && mLogger -i "Initialization successful." || mLogger -e "Initialization wasn't successful"
 
-mLogger -i "Data will be stored under the path $OUTPUT"
+mLogger -i "mPulse dump path is set to $OUTPUT"
 
 mLogger -i "mPulse is capturing System Runtime data"
 System_Runtime
@@ -326,7 +326,9 @@ System_Logs
 
 if [ ! -z $JVMDATA ] && [ $JVMDATA -eq '1' ]
 	then
+		mLogger -i "mPulse is dumping JVM data for PID $JVMPID"
 		mkdir $OUTPUT/JVM_Runtime
-		 JVM_Runtime $JVMPID
+		JVM_Runtime $JVMPID
 fi
 
+mLogger -i "mPulse execution has been finished"
