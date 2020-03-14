@@ -32,6 +32,7 @@ Usage: $0 -d <Output directory>
          -d provide input directory where you want to generate output.
          -j to provide java pid to run JVM diagnostics againt java pid.
                 Syntax: $0 -d <Output directory> -j <java pid>
+			use 0 to manually select JVM.
          -c Check whether required binaries are available on the system.
 	 -h prints this information.
             mPulse manual page can be accessed through 'manual' parameter
@@ -81,6 +82,36 @@ done < ~/commands_mPulse
 rm ~/commands_mPulse
 }
 
+mJVMfind () {
+
+JPIDS[0]=$(jps -l|grep -v jps|wc -l)
+if [ ${JPIDS[0]} -ne 0 ]
+then
+	echo "Select Java VM for mPulse"
+	j=1
+	for pid in $(jps -l|grep -v jps|awk '{print $1}')
+	do
+        	JPIDS[$j]=$pid
+        	j=$j+1
+	done
+
+	for opt in $(seq 1 ${JPIDS[0]})
+	do
+        	echo "$opt - $(jps -l|grep ${JPIDS[$opt]})"
+	done
+	read sel
+	if [ $sel -lt 1 ] || [ $sel -gt $opt ]
+	then
+		echo "Bad selection"
+	else
+		JVMPID=${JPIDS[$sel]}
+		JVMDATA='1'
+	fi
+else
+	echo "No JVM running"
+fi
+}
+
 
 #Initialize - performs standard checks for the script and sets variable as well as create 
 #             required directory structure.
@@ -112,10 +143,14 @@ do
 				exit 4
 		     fi
 		     ;;
-		j)   if [ ! -z $OPTARG ] && [ $(ps -p $OPTARG 2> /dev/null|wc -l) -gt 1  ]
+		j)   if [ ! -z $OPTARG ] && [ $(ps -p $OPTARG 2> /dev/null|wc -l) -gt 1  ] 
 			then
+				#mJVMfind && JVMDATA='1'
 				JVMPID=$OPTARG
 				JVMDATA='1'
+		     elif [ $OPTARG -eq 0 ]
+			then 
+				mJVMfind 
 		     else
 				mUsage "Incorrect JVM parameters"
 		     		exit 5
@@ -305,7 +340,8 @@ jstack -m -F -l $JVMPID > jstack_mlF.out  2> $ERRLOG
 strace -o $JVMPID.strace -tt -T -ff -p $JVMPID > strace.log 2>&1 &
 STPID=$!
 sleep 30
-kill -8 $STPID
+
+kill -8 $STPID > /dev/null 2>&1
 
 }
 
