@@ -7,3 +7,5 @@ Something about the script
 - This script captures System logs, System runtime, System information and recently added JVM diagnostics
 - This is script is WIP and some features are not fool proof.
         
+Future improvements
+- JVM dump mechanism is very basic and does need tuning. Currecntly simultaneous JVM dump is not enabled. It might cost considerable amount of time if the jvm dump gets stuck due to unresponsive java VM.
