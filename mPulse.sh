@@ -109,10 +109,23 @@ then
 		JVMDATA='1'
 	fi
 else
-	echo "No JVM running"
+	echo "No JVM running..JVMdump will be skiped"
 fi
 }
 
+mBanner() {
+
+echo "       ______       _
+      (_____ \     | |
+ ____  _____) )   _| | ___  ____
+|    \|  ____/ | | | |/___)/ _  )
+| | | | |    | |_| | |___ ( (/ /
+|_|_|_|_|     \____|_(___/ \____)
+
+
+${0#./} script captures runtime parameters and system logs to troubleshoot system performance bottlenecks. Happy troubleshooting! 
+"
+}
 
 #Initialize - performs standard checks for the script and sets variable as well as create 
 #             required directory structure.
@@ -329,12 +342,25 @@ iotop -n 10 -btqqq -p $JVMPID > iotop_jvm.out 2> /dev/null
 jmap -heap $JVMPID > jmap_heap.out  2> $ERRLOG
 jmap -histo $JVMPID -F > jmap_histo.out  2> $ERRLOG
 jmap -finalizerinfo $JVMPID > jmap_fininfo.out  2> $ERRLOG
-jmap -F -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log  2> $ERRLOG
+jmap -dump:file=$JVMPID.bin $JVMPID > jmap_dump.log  2> $ERRLOG
 
+if [ $? -ne 0 ]
+then
+	jmap -F -dump:file=$JVMPID.F.bin $JVMPID > jmap_f_dump.log  2> $ERRLOG
+fi
 #jstack
 jstack -l $JVMPID > jstack_l.out  2> $ERRLOG
-jstack -F -l $JVMPID > jstack_Fl.out  2> $ERRLOG 
-jstack -m -F -l $JVMPID > jstack_mlF.out  2> $ERRLOG
+if [ $? -ne 0 ]
+then 
+	jstack -F -l $JVMPID > jstack_Fl.out  2> $ERRLOG
+fi
+
+jstack -m -l $JVMPID > jstack_ml.out  2> $ERRLOG
+
+if [ $? -ne 0 ]
+then
+	jstack -m -F -l $JVMPID > jstack_mlF.out  2> $ERRLOG
+fi
 
 
 #strace
@@ -346,9 +372,9 @@ kill -8 $STPID > /dev/null 2>&1
 
 }
 
-
+mBanner
 Initialize $@
-[ $? == 0 ] && mLogger -i "Initialization successful." || mLogger -e "Initialization wasn't successful"
+[ $? == 0 ] && mLogger -i "Successfully loaded." || mLogger -e "Initialization wasn't successful"
 
 mLogger -i "mPulse dump path is set to $OUTPUT"
 
