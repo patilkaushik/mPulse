@@ -87,7 +87,7 @@ mJVMfind () {
 JPIDS[0]=$(jps -l|grep -v jps|wc -l)
 if [ ${JPIDS[0]} -ne 0 ]
 then
-	echo "Select Java VM for mPulse"
+	echo "Below Java VM are running on the system"
 	j=1
 	for pid in $(jps -l|grep -v jps|awk '{print $1}')
 	do
@@ -97,8 +97,9 @@ then
 
 	for opt in $(seq 1 ${JPIDS[0]})
 	do
-        	echo "$opt - $(jps -l|grep ${JPIDS[$opt]})"
+        	echo "  $opt) - $(jps -l|grep ${JPIDS[$opt]})"
 	done
+	echo "Select your JVM for mPulse"
 	read sel
 	if [ $sel -lt 1 ] || [ $sel -gt $opt ]
 	then
