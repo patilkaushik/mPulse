@@ -331,7 +331,8 @@ JVM_Runtime () {
 
 if [ -z $JAVA_HOME  ] || [ ! -d $JAVA_HOME ]
 	then
-		JAVA_HOME=$(ls -ltdrh /usr/lib/jvm/*jdk*|grep -v jre|tail -1|awk '{print $NF}')
+		JAVA_HOME=$(ls -ltdrh /usr/lib/jvm/*jdk*|tail -1|awk '{print $NF}')
+		#JAVA_HOME=$(ls -ltdrh /usr/lib/jvm/*jdk*|grep -v jre|tail -1|awk '{print $NF}')
 fi
 
 cd $OUTPUT/JVM_Runtime
